@@ -1,0 +1,124 @@
+/* RESET */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+}
+
+/* MAIN WRAPPER */
+.main-wrapper {
+    width: 100%;
+    min-height: 100vh;
+}
+
+/* CENTER CONTAINER (ONLY FOR LOGIN/REGISTER) */
+.container {
+    width: 100%;
+    max-width: 400px;
+    margin: auto;
+    padding-top: 80px;
+}
+
+/* 🔥 NEW: ONLY FOR FORM PAGES */
+.form-container {
+    width: 100%;
+    max-width: 400px;
+    margin: auto;
+    padding-top: 80px;
+}
+
+/* TOP CARD (VOICE SECTION) */
+.top-card {
+    width: 350px;
+    margin: 30px auto;
+    padding: 20px;
+    background: white;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+}
+
+.card {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0px 10px 25px rgba(0,0,0,0.2);
+}
+
+/* HEADINGS */
+h2 {
+    margin-bottom: 20px;
+}
+
+/* INPUT */
+input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+/* BUTTON */
+button {
+    width: 100%;
+    padding: 12px;
+    background: #6a11cb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #2575fc;
+}
+
+/* LINKS */
+a {
+    color: #2575fc;
+    text-decoration: none;
+}
+
+/* ---------------------- */
+/* 🔥 PRODUCT GRID FIX */
+/* ---------------------- */
+
+.product-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 25px;
+    padding: 80px;
+    justify-content: center;   /* 🔥 THIS CENTERS ROWS */
+}
+
+/* PRODUCT CARD */
+.product-card {
+    width: 220px;
+    background: white;
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: 0.3s;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+}
+
+/* PRICE */
+.price {
+    color: green;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+/* EMPTY TEXT */
+.empty-text {
+    text-align: center;
+    width: 100%;
+    color: white;
+    font-size: 18px;
+}

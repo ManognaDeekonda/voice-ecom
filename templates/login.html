@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block title %} Login {% endblock %}
+
+{% block content %}
+
+<div class="card">
+    <h2>Login</h2>
+
+    <form action="/login" method="POST">
+
+        <input type="email" name="email" placeholder="Email" required>
+
+        <div class="password-box">
+            <input type="password" name="password" id="loginPass" placeholder="Password" required>
+            <span onclick="togglePassword('loginPass')">👁️</span>
+        </div>
+
+        <button type="submit">Login</button>
+
+    </form>
+
+    <p>Don't have an account? <a href="/">Register</a></p>
+</div>
+
+<script>
+function togglePassword(id){
+    let input = document.getElementById(id);
+    input.type = input.type === "password" ? "text" : "password";
+}
+</script>
+
+{% endblock %}
+
+
+
+

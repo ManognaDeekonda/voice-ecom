@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>{% block title %}{% endblock %}</title>
+
+    <!-- ✅ CORRECT (DO NOT CHANGE) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+</head>
+
+<body>
+
+    <div class="main-wrapper">
+
+        <!-- ✅ ONLY wrap login & register -->
+        {% if request.path == '/' or request.path == '/login' %}
+        <div class="form-container">
+        {% endif %}
+
+        {% block content %}{% endblock %}
+
+        {% if request.path == '/' or request.path == '/login' %}
+        </div>
+        {% endif %}
+
+    </div>
+
+</body>
+</html>

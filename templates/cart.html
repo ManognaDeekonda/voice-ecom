@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+{% block title %} Cart {% endblock %}
+
+{% block content %}
+
+<div class="top-card">
+    <h2>🛒 Your Cart</h2>
+
+    <a href="/products">← Back to Products</a>
+    <br><br>
+</div>
+
+<div class="product-grid">
+
+    {% if cart %}
+    {% for item in cart %}
+    <div class="product-card">
+        <h3>{{ item.name }}</h3>
+        <p class="price">₹{{ item.price }}</p>
+
+        <!-- ❌ REMOVE BUTTON -->
+        <a href="/remove/{{ item.id }}">
+            <button>Remove</button>
+        </a>
+    </div>
+    {% endfor %}
+    {% else %}
+    <h3 class="empty-text">Cart is empty</h3>
+    {% endif %}
+
+</div>
+
+<!-- ✅ TOTAL SECTION -->
+{% if cart %}
+<div class="top-card">
+    <h2>Total Amount: ₹{{ total }}</h2>
+</div>
+{% endif %}
+
+{% endblock %}
