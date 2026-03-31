@@ -1,10 +1,19 @@
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import re
+import os
 from difflib import get_close_matches
 
 app = Flask(__name__)
-app.secret_key = "secret123"
+app.secret_key = os.environ.get("SECRET_KEY", "secret123")
+
+# -------------------------
+# DATABASE PATH (FIXED ✅)
+# -------------------------
+DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
+
+def get_connection():
+    return sqlite3.connect(DB_PATH)
 
 # -------------------------
 # NORMALIZE FUNCTION 🔥
@@ -44,10 +53,9 @@ def detect_category(query):
 # CREATE DATABASE
 # -------------------------
 def init_db():
-    conn = sqlite3.connect("database.db")
+    conn = get_connection()
     cursor = conn.cursor()
 
-    # Users table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS users(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,7 +65,6 @@ def init_db():
     )
     """)
 
-    # Products table
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS products(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -66,7 +73,6 @@ def init_db():
     )
     """)
 
-    # Add admin if not exists
     cursor.execute("SELECT * FROM users WHERE email='admin@gmail.com'")
     if not cursor.fetchone():
         cursor.execute(
@@ -74,35 +80,31 @@ def init_db():
             ("Admin", "admin@gmail.com", "admin123")
         )
 
-    # Insert products if table empty
     cursor.execute("SELECT COUNT(*) FROM products")
     count = cursor.fetchone()[0]
+
     if count == 0:
         cursor.executemany(
             "INSERT INTO products(name, price) VALUES(?,?)",
             [
-                # SHOES
                 ("Running Shoes Pro", 2500), ("Casual Sneakers", 1800),
                 ("Sports Trainers", 3000), ("Formal Leather Shoes", 3500),
                 ("Nike Air Max", 6000), ("Adidas Ultraboost", 8000),
                 ("Puma Street Shoes", 2200), ("Reebok Classic", 2700),
                 ("Campus Sneakers", 1500), ("Woodland Boots", 4500),
 
-                # LAPTOPS
                 ("Gaming Laptop RTX 3050", 70000), ("Gaming Laptop RTX 4060", 95000),
                 ("Office Laptop i5", 50000), ("Office Laptop i7", 65000),
                 ("MacBook Air M1", 85000), ("MacBook Pro M2", 120000),
                 ("HP Pavilion Laptop", 55000), ("Dell Inspiron Laptop", 52000),
                 ("Lenovo ThinkPad", 60000), ("Asus ROG Strix", 110000),
 
-                # HEADPHONES
                 ("Wireless Headphones", 4000), ("Bluetooth Headphones", 2500),
                 ("Sony WH-1000XM4", 20000), ("JBL Tune 510BT", 3000),
                 ("Boat Rockerz 450", 1500), ("Noise Cancelling Headphones", 7000),
                 ("Gaming Headset RGB", 3500), ("Over Ear Headphones", 2800),
                 ("In-Ear Earbuds", 1200), ("Apple AirPods", 15000),
 
-                # CLOTHING
                 ("Men Casual Shirt", 1200), ("Women Stylish Shirt", 1500),
                 ("Men T-Shirt", 800), ("Women Kurti", 1800),
                 ("Denim Jeans", 2000), ("Winter Jacket", 3500),
@@ -110,6 +112,7 @@ def init_db():
                 ("Track Pants", 1400), ("Summer Dress", 1600)
             ]
         )
+
     conn.commit()
     conn.close()
 
@@ -119,7 +122,7 @@ init_db()
 # GET PRODUCTS
 # -------------------------
 def get_products():
-    conn = sqlite3.connect("database.db")
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM products")
     data = cursor.fetchall()
@@ -147,7 +150,7 @@ def register():
         return "❌ Passwords do not match"
 
     try:
-        conn = sqlite3.connect("database.db")
+        conn = get_connection()
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO users(name,email,password) VALUES(?,?,?)",
@@ -168,7 +171,7 @@ def login():
     email = request.form.get("email", "").strip().lower()
     password = request.form.get("password", "").strip()
 
-    conn = sqlite3.connect("database.db")
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         "SELECT * FROM users WHERE email=? AND password=?",
@@ -179,7 +182,6 @@ def login():
 
     if user:
         session["user"] = email
-        # Redirect admin to admin page
         if email == "admin@gmail.com":
             return redirect("/admin")
         return redirect("/products")
@@ -199,6 +201,7 @@ def products_page():
     if query:
         query = normalize(query)
         category, keywords = detect_category(query)
+
         if keywords:
             products = [
                 p for p in products
@@ -237,52 +240,63 @@ def remove_from_cart(id):
     return redirect("/cart")
 
 # -------------------------
-# VOICE ADD / REMOVE
+# VOICE
 # -------------------------
 @app.route("/voice-add")
 def voice_add():
     if "user" not in session:
         return redirect("/login")
+
     query = normalize(request.args.get("q", ""))
     category, _ = detect_category(query)
+
     if "show" in query and category:
         return redirect(f"/products?q={category}")
+
     products = get_products()
     product_map = {normalize(p["name"]): p for p in products}
+
     match = get_close_matches(query, product_map.keys(), n=1, cutoff=0.5)
+
     if match:
         p = product_map[match[0]]
         session.setdefault("cart", []).append(p["id"])
         session.modified = True
         return redirect("/cart")
+
     return redirect("/products")
 
 @app.route("/voice-remove")
 def voice_remove():
     if "user" not in session:
         return redirect("/login")
+
     products = get_products()
     query = normalize(request.args.get("q", ""))
     product_map = {normalize(p["name"]): p for p in products}
+
     match = get_close_matches(query, product_map.keys(), n=1, cutoff=0.5)
+
     if match:
         p = product_map[match[0]]
         if "cart" in session and p["id"] in session["cart"]:
             session["cart"].remove(p["id"])
             session.modified = True
+
     return redirect("/cart")
 
 # -------------------------
-# ADMIN PAGE 🔐
+# ADMIN
 # -------------------------
 @app.route("/admin")
 def admin():
     if "user" not in session:
         return redirect("/login")
+
     if session["user"] != "admin@gmail.com":
         return "❌ Access Denied"
 
-    conn = sqlite3.connect("database.db")
+    conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM users")
     users = cursor.fetchall()
@@ -300,6 +314,8 @@ def logout():
     session.clear()
     return redirect("/login")
 
-
+# -------------------------
+# RUN
+# -------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
