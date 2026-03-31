@@ -1,12 +1,2 @@
 Flask
 gunicorn
-
-
-
-
-
-
-
-
-
-
