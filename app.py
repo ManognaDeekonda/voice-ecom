@@ -8,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
 
 # -------------------------
-# DATABASE PATH (FIXED ✅)
+# DATABASE PATH
 # -------------------------
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 
@@ -16,9 +16,11 @@ def get_connection():
     return sqlite3.connect(DB_PATH)
 
 # -------------------------
-# NORMALIZE FUNCTION 🔥
+# NORMALIZE FUNCTION
 # -------------------------
 def normalize(text):
+    if not text:
+        return ""
     text = text.lower()
     text = text.replace("-", " ")
     text = text.replace("tshirt", "t shirt")
@@ -30,10 +32,11 @@ def normalize(text):
     return text.strip()
 
 # -------------------------
-# CATEGORY DETECTION 🔥
+# CATEGORY DETECTION
 # -------------------------
 def detect_category(query):
     query = normalize(query)
+
     categories = {
         "shoes": ["shoe", "shoes", "sneakers", "boots"],
         "laptops": ["laptop", "macbook", "thinkpad"],
@@ -41,16 +44,17 @@ def detect_category(query):
         "clothing": ["shirt", "t shirt", "jeans", "hoodie", "dress", "kurti"]
     }
 
-    for category, words in categories.items():
-        if category in query:
-            return category, words
+    for cat, words in categories.items():
+        if cat in query:
+            return cat, words
         for word in words:
             if word in query:
-                return category, words
-    return None, None
+                return cat, words
+
+    return None, []
 
 # -------------------------
-# CREATE DATABASE
+# INIT DATABASE
 # -------------------------
 def init_db():
     conn = get_connection()
@@ -73,17 +77,17 @@ def init_db():
     )
     """)
 
-    cursor.execute("SELECT * FROM users WHERE email='admin@gmail.com'")
+    # Admin
+    cursor.execute("SELECT * FROM users WHERE email=?", ("admin@gmail.com",))
     if not cursor.fetchone():
         cursor.execute(
             "INSERT INTO users(name,email,password) VALUES(?,?,?)",
             ("Admin", "admin@gmail.com", "admin123")
         )
 
+    # Products
     cursor.execute("SELECT COUNT(*) FROM products")
-    count = cursor.fetchone()[0]
-
-    if count == 0:
+    if cursor.fetchone()[0] == 0:
         cursor.executemany(
             "INSERT INTO products(name, price) VALUES(?,?)",
             [
@@ -182,9 +186,8 @@ def login():
 
     if user:
         session["user"] = email
-        if email == "admin@gmail.com":
-            return redirect("/admin")
-        return redirect("/products")
+        return redirect("/admin" if email == "admin@gmail.com" else "/products")
+
     return "❌ Invalid credentials"
 
 # -------------------------
@@ -250,7 +253,7 @@ def voice_add():
     query = normalize(request.args.get("q", ""))
     category, _ = detect_category(query)
 
-    if "show" in query and category:
+    if category and "show" in query:
         return redirect(f"/products?q={category}")
 
     products = get_products()
