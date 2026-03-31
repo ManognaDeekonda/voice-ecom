@@ -2,8 +2,6 @@ from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import re
 import os
-from difflib import get_close_matches
-
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
@@ -46,8 +44,6 @@ def detect_category(query):
     }
 
     for cat, words in categories.items():
-        if cat in query:
-            return cat, words
         for word in words:
             if word in query:
                 return cat, words
@@ -187,7 +183,7 @@ def login():
 
     if user:
         session["user"] = email
-        return redirect("/admin" if email == "admin@gmail.com" else "/products")
+        return redirect("/products")
 
     return "❌ Invalid credentials"
 
@@ -244,73 +240,41 @@ def remove_from_cart(id):
     return redirect("/cart")
 
 # -------------------------
-# VOICE
+# VOICE ADD (FIXED)
 # -------------------------
 @app.route('/voice-add')
 def voice_add():
 
-    query = request.args.get('q', '').lower()
+    query = request.args.get('q', '')
+    query = normalize(query)
 
     if not query:
         return redirect('/products')
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    # 🔥 get all products
-    cursor.execute("SELECT * FROM products")
-    products = cursor.fetchall()
-
+    products = get_products()
     found_product = None
 
-    # 🔥 try match
+    # 🔥 direct match
     for p in products:
-        product_name = normalize(p[1])
-
-        if query in product_name:
+        if query in normalize(p["name"]):
             found_product = p
             break
 
-    # 🔥 if not found → try category detection
+    # 🔥 category match
     if not found_product:
         category, keywords = detect_category(query)
 
         for p in products:
-            product_name = normalize(p[1])
-
-            if any(word in product_name for word in keywords):
+            if any(word in normalize(p["name"]) for word in keywords):
                 found_product = p
                 break
 
-    conn.close()
-
-    # 🛒 add to session cart
+    # 🛒 add to cart
     if found_product:
-        session.setdefault("cart", []).append(found_product[0])
+        session.setdefault("cart", []).append(found_product["id"])
         session.modified = True
 
     return redirect('/cart')
-
-# -------------------------
-# ADMIN
-# -------------------------
-@app.route("/admin")
-def admin():
-    if "user" not in session:
-        return redirect("/login")
-
-    if session["user"] != "admin@gmail.com":
-        return "❌ Access Denied"
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM users")
-    users = cursor.fetchall()
-    cursor.execute("SELECT * FROM products")
-    products = cursor.fetchall()
-    conn.close()
-
-    return render_template("admin.html", users=users, products=products)
 
 # -------------------------
 # LOGOUT
@@ -324,4 +288,4 @@ def logout():
 # RUN
 # -------------------------
 if __name__ == "__main__":
-    app.run()
+    app.run(debug=True)
