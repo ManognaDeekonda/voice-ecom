@@ -276,6 +276,28 @@ def voice_add():
 
     return redirect('/cart')
 
+
+
+@app.route('/voice-remove')
+def voice_remove():
+
+    query = request.args.get('q', '')
+    query = normalize(query)
+
+    if not query:
+        return redirect('/cart')
+
+    products = get_products()
+    cart_ids = session.get("cart", [])
+
+    for p in products:
+        if p["id"] in cart_ids and query in normalize(p["name"]):
+            session["cart"].remove(p["id"])
+            session.modified = True
+            break
+
+    return redirect('/cart')
+
 # -------------------------
 # LOGOUT
 # -------------------------

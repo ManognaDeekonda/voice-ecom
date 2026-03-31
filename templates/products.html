@@ -7,7 +7,7 @@
 
     <h2>🎤 Voice Shopping</h2>
 
-    <p id="voiceStatus" style="color: gray;">Click mic and say a product</p>
+    <p id="voiceStatus" style="color: gray;">Click mic and say a command</p>
 
     <a href="/cart">Cart</a> |
     <a href="/logout">Logout</a>
@@ -89,22 +89,31 @@ function startListening(){
             return;
         }
 
-        // 🛒 CART
-        if(cleanText.includes("cart")){
-            speak("Opening cart");
-            window.location.href = "/cart";
-        }
+        // ✅ ADD (FIRST PRIORITY FIX)
+        if(cleanText.includes("add")){
 
-        // 🚪 LOGOUT
-        else if(cleanText.includes("logout")){
-            speak("Logging out");
-            window.location.href = "/logout";
+            let productName = cleanText
+                .replace("add", "")
+                .replace("to cart", "")
+                .trim();
+
+            if(productName === ""){
+                speak("Say product to add");
+                return;
+            }
+
+            speak("Adding " + productName);
+            window.location.href = "/voice-add?q=" + encodeURIComponent(productName);
         }
 
         // ❌ REMOVE
-        else if(cleanText.includes("remove")){
+        else if(cleanText.includes("remove") || cleanText.includes("delete")){
 
-            let productName = cleanText.replace("remove", "").trim();
+            let productName = cleanText
+                .replace("remove", "")
+                .replace("delete", "")
+                .replace("from cart", "")
+                .trim();
 
             if(productName === ""){
                 speak("Say product to remove");
@@ -115,18 +124,16 @@ function startListening(){
             window.location.href = "/voice-remove?q=" + encodeURIComponent(productName);
         }
 
-        // ✅ ADD
-        else if(cleanText.includes("add")){
+        // 🛒 CART
+        else if(cleanText.includes("cart")){
+            speak("Opening cart");
+            window.location.href = "/cart";
+        }
 
-            let productName = cleanText.replace("add", "").trim();
-
-            if(productName === ""){
-                speak("Say product to add");
-                return;
-            }
-
-            speak("Adding " + productName);
-            window.location.href = "/voice-add?q=" + encodeURIComponent(productName);
+        // 🚪 LOGOUT
+        else if(cleanText.includes("logout")){
+            speak("Logging out");
+            window.location.href = "/logout";
         }
 
         // 🔍 SEARCH
@@ -150,11 +157,18 @@ function startListening(){
     recognition.start();
 }
 
-// 🚀 INTRO VOICE AFTER LOGIN
+// 🚀 VOICE ON LOAD (LOGIN + ACTION FEEDBACK)
 window.onload = function(){
 
-    if(!sessionStorage.getItem("voiceIntroDone")){
+    // 🔊 Backend message (add/remove)
+    let msg = "{{ session.get('voice_msg', '') }}";
 
+    if(msg){
+        speak(msg);
+    }
+
+    // 🔊 First time intro
+    if(!sessionStorage.getItem("voiceIntroDone")){
         sessionStorage.setItem("voiceIntroDone", "true");
 
         setTimeout(() => {
