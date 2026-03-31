@@ -7,6 +7,8 @@
 
     <h2>🎤 Voice Shopping</h2>
 
+    <p id="voiceStatus" style="color: gray;">Click mic and say a product</p>
+
     <a href="/cart">Cart</a> |
     <a href="/logout">Logout</a>
 
@@ -20,8 +22,6 @@
 
 </div>
 
-
-<!-- 🔥 PRODUCTS OUTSIDE CARD -->
 <div class="product-grid">
 
     {% if products %}
@@ -35,16 +35,16 @@
     </div>
     {% endfor %}
     {% else %}
-    <h3 class="empty-text">🎤 Say a product like "shoes"</h3>
+    <h3 class="empty-text">🎤 Try saying "add shoes" or "search laptop"</h3>
     {% endif %}
 
 </div>
 
 <script>
 
-// 🔊 TEXT TO SPEECH (WITH RESET)
+// 🔊 TEXT TO SPEECH
 function speak(text){
-    window.speechSynthesis.cancel();   // 🔥 STOP previous speech
+    window.speechSynthesis.cancel();
     const speech = new SpeechSynthesisUtterance(text);
     speech.lang = "en-IN";
     window.speechSynthesis.speak(speech);
@@ -52,6 +52,8 @@ function speak(text){
 
 // 🎤 VOICE INPUT
 function startListening(){
+
+    const status = document.getElementById("voiceStatus");
 
     if (!('webkitSpeechRecognition' in window)){
         alert("Use Google Chrome");
@@ -62,17 +64,17 @@ function startListening(){
 
     recognition.lang = "en-IN";
     recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
 
     recognition.onstart = function(){
-        console.log("Listening...");
+        status.innerText = "🎧 Listening...";
     };
 
     recognition.onresult = function(event){
 
         let voiceText = event.results[0][0].transcript.toLowerCase().trim();
-
         console.log("User said:", voiceText);
+
+        status.innerText = "You said: " + voiceText;
 
         let cleanText = voiceText
             .replace("search", "")
@@ -83,73 +85,72 @@ function startListening(){
             .trim();
 
         if(cleanText === ""){
-            speak("Please say a product name");
+            speak("Please say something");
             return;
         }
 
-        // 🎯 COMMANDS
+        // 🛒 CART
         if(cleanText.includes("cart")){
-                speak("Opening cart");
-                window.location.href = "/cart";
+            speak("Opening cart");
+            window.location.href = "/cart";
         }
 
+        // 🚪 LOGOUT
         else if(cleanText.includes("logout")){
-                speak("Logging out");
-                window.location.href = "/logout";
+            speak("Logging out");
+            window.location.href = "/logout";
         }
 
-            // ✅ ADD HERE
+        // ❌ REMOVE
         else if(cleanText.includes("remove")){
 
-                let productName = cleanText.replace("remove", "").trim();
+            let productName = cleanText.replace("remove", "").trim();
 
-                if(productName === ""){
-                    speak("Please say which product to remove");
-                    return;
-                }
+            if(productName === ""){
+                speak("Say product to remove");
+                return;
+            }
 
-                speak("Removing " + productName + " from cart");
-
-                window.location.href = "/voice-remove?q=" + encodeURIComponent(productName);
+            speak("Removing " + productName);
+            window.location.href = "/voice-remove?q=" + encodeURIComponent(productName);
         }
 
-            // EXISTING ADD
+        // ✅ ADD
         else if(cleanText.includes("add")){
 
-                let productName = cleanText.replace("add", "").trim();
+            let productName = cleanText.replace("add", "").trim();
 
-                if(productName === ""){
-                    speak("Please say which product to add");
-                    return;
-                }
+            if(productName === ""){
+                speak("Say product to add");
+                return;
+            }
 
-                speak("Adding " + productName + " to cart");
-
-                window.location.href = "/voice-add?q=" + encodeURIComponent(productName);
+            speak("Adding " + productName);
+            window.location.href = "/voice-add?q=" + encodeURIComponent(productName);
         }
 
-            // SEARCH
+        // 🔍 SEARCH
         else{
-                speak("Searching for " + cleanText);
+            speak("Searching for " + cleanText);
 
-                document.getElementById("searchInput").value = cleanText;
-                document.getElementById("searchForm").submit();
+            document.getElementById("searchInput").value = cleanText;
+            document.getElementById("searchForm").submit();
         }
     };
 
-    recognition.onerror = function(event){
-        console.log("Error:", event.error);
-        speak("Sorry, try again");
+    recognition.onerror = function(){
+        speak("Try again");
+        status.innerText = "Error. Try again.";
     };
 
     recognition.onend = function(){
-        console.log("Stopped listening");
+        status.innerText = "Click mic and speak again";
     };
 
     recognition.start();
 }
 
-// 🚀 ONE-TIME VOICE INTRO
+// 🚀 INTRO VOICE AFTER LOGIN
 window.onload = function(){
 
     if(!sessionStorage.getItem("voiceIntroDone")){
@@ -157,10 +158,11 @@ window.onload = function(){
         sessionStorage.setItem("voiceIntroDone", "true");
 
         setTimeout(() => {
-            speak("Click the mic and say a product name");
-        }, 500);
+            speak("Welcome to voice shopping. Click the mic and say add shoes or search laptop");
+        }, 800);
     }
 };
 
 </script>
+
 {% endblock %}

@@ -4,6 +4,7 @@ import re
 import os
 from difflib import get_close_matches
 
+
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
 
@@ -245,48 +246,50 @@ def remove_from_cart(id):
 # -------------------------
 # VOICE
 # -------------------------
-@app.route("/voice-add")
+@app.route('/voice-add')
 def voice_add():
-    if "user" not in session:
-        return redirect("/login")
 
-    query = normalize(request.args.get("q", ""))
-    category, _ = detect_category(query)
+    query = request.args.get('q', '').lower()
 
-    if category and "show" in query:
-        return redirect(f"/products?q={category}")
+    if not query:
+        return redirect('/products')
 
-    products = get_products()
-    product_map = {normalize(p["name"]): p for p in products}
+    conn = get_connection()
+    cursor = conn.cursor()
 
-    match = get_close_matches(query, product_map.keys(), n=1, cutoff=0.5)
+    # 🔥 get all products
+    cursor.execute("SELECT * FROM products")
+    products = cursor.fetchall()
 
-    if match:
-        p = product_map[match[0]]
-        session.setdefault("cart", []).append(p["id"])
+    found_product = None
+
+    # 🔥 try match
+    for p in products:
+        product_name = normalize(p[1])
+
+        if query in product_name:
+            found_product = p
+            break
+
+    # 🔥 if not found → try category detection
+    if not found_product:
+        category, keywords = detect_category(query)
+
+        for p in products:
+            product_name = normalize(p[1])
+
+            if any(word in product_name for word in keywords):
+                found_product = p
+                break
+
+    conn.close()
+
+    # 🛒 add to session cart
+    if found_product:
+        session.setdefault("cart", []).append(found_product[0])
         session.modified = True
-        return redirect("/cart")
 
-    return redirect("/products")
-
-@app.route("/voice-remove")
-def voice_remove():
-    if "user" not in session:
-        return redirect("/login")
-
-    products = get_products()
-    query = normalize(request.args.get("q", ""))
-    product_map = {normalize(p["name"]): p for p in products}
-
-    match = get_close_matches(query, product_map.keys(), n=1, cutoff=0.5)
-
-    if match:
-        p = product_map[match[0]]
-        if "cart" in session and p["id"] in session["cart"]:
-            session["cart"].remove(p["id"])
-            session.modified = True
-
-    return redirect("/cart")
+    return redirect('/cart')
 
 # -------------------------
 # ADMIN
