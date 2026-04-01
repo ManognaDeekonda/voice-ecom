@@ -2,20 +2,29 @@ from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import re
 import os
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "secret123")
 
-# -------------------------
-# DATABASE PATH
-# -------------------------
 DB_PATH = os.path.join(os.path.dirname(__file__), "database.db")
 
 def get_connection():
     return sqlite3.connect(DB_PATH)
 
 # -------------------------
-# NORMALIZE FUNCTION
+# 🔐 LOGIN REQUIRED DECORATOR
+# -------------------------
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user" not in session:
+            return redirect("/login")
+        return f(*args, **kwargs)
+    return wrapper
+
+# -------------------------
+# NORMALIZE
 # -------------------------
 def normalize(text):
     if not text:
@@ -51,7 +60,7 @@ def detect_category(query):
     return None, []
 
 # -------------------------
-# INIT DATABASE
+# INIT DB
 # -------------------------
 def init_db():
     conn = get_connection()
@@ -82,35 +91,17 @@ def init_db():
             ("Admin", "admin@gmail.com", "admin123")
         )
 
-    # Products
+    # Products (only once)
     cursor.execute("SELECT COUNT(*) FROM products")
     if cursor.fetchone()[0] == 0:
         cursor.executemany(
             "INSERT INTO products(name, price) VALUES(?,?)",
             [
                 ("Running Shoes Pro", 2500), ("Casual Sneakers", 1800),
-                ("Sports Trainers", 3000), ("Formal Leather Shoes", 3500),
                 ("Nike Air Max", 6000), ("Adidas Ultraboost", 8000),
-                ("Puma Street Shoes", 2200), ("Reebok Classic", 2700),
-                ("Campus Sneakers", 1500), ("Woodland Boots", 4500),
-
-                ("Gaming Laptop RTX 3050", 70000), ("Gaming Laptop RTX 4060", 95000),
-                ("Office Laptop i5", 50000), ("Office Laptop i7", 65000),
-                ("MacBook Air M1", 85000), ("MacBook Pro M2", 120000),
-                ("HP Pavilion Laptop", 55000), ("Dell Inspiron Laptop", 52000),
-                ("Lenovo ThinkPad", 60000), ("Asus ROG Strix", 110000),
-
-                ("Wireless Headphones", 4000), ("Bluetooth Headphones", 2500),
-                ("Sony WH-1000XM4", 20000), ("JBL Tune 510BT", 3000),
-                ("Boat Rockerz 450", 1500), ("Noise Cancelling Headphones", 7000),
-                ("Gaming Headset RGB", 3500), ("Over Ear Headphones", 2800),
-                ("In-Ear Earbuds", 1200), ("Apple AirPods", 15000),
-
-                ("Men Casual Shirt", 1200), ("Women Stylish Shirt", 1500),
-                ("Men T-Shirt", 800), ("Women Kurti", 1800),
-                ("Denim Jeans", 2000), ("Winter Jacket", 3500),
-                ("Unisex Hoodie", 2200), ("Formal Shirt", 1700),
-                ("Track Pants", 1400), ("Summer Dress", 1600)
+                ("Gaming Laptop RTX 3050", 70000), ("MacBook Air M1", 85000),
+                ("Sony Headphones", 20000), ("Boat Rockerz", 1500),
+                ("Men T-Shirt", 800), ("Women Kurti", 1800)
             ]
         )
 
@@ -139,10 +130,10 @@ def register_page():
 
 @app.route("/register", methods=["POST"])
 def register():
-    name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip().lower()
-    password = request.form.get("password", "").strip()
-    confirm = request.form.get("confirm", "").strip()
+    name = request.form.get("name")
+    email = request.form.get("email").lower()
+    password = request.form.get("password")
+    confirm = request.form.get("confirm")
 
     if email == "admin@gmail.com":
         return "❌ Cannot register as admin"
@@ -160,8 +151,8 @@ def register():
         conn.commit()
         conn.close()
         return redirect("/login")
-    except Exception as e:
-        return f"❌ Registration Error: {e}"
+    except:
+        return "❌ Email already exists"
 
 @app.route("/login")
 def login_page():
@@ -169,8 +160,8 @@ def login_page():
 
 @app.route("/login", methods=["POST"])
 def login():
-    email = request.form.get("email", "").strip().lower()
-    password = request.form.get("password", "").strip()
+    email = request.form.get("email").lower()
+    password = request.form.get("password")
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -183,6 +174,7 @@ def login():
 
     if user:
         session["user"] = email
+        session["voice_msg"] = "Login successful. Welcome to voice shopping"
         return redirect("/products")
 
     return "❌ Invalid credentials"
@@ -191,10 +183,8 @@ def login():
 # PRODUCTS
 # -------------------------
 @app.route("/products")
+@login_required
 def products_page():
-    if "user" not in session:
-        return redirect("/login")
-
     products = get_products()
     query = request.args.get("q", "")
 
@@ -219,12 +209,15 @@ def products_page():
 # CART
 # -------------------------
 @app.route("/add/<int:id>")
+@login_required
 def add_to_cart(id):
     session.setdefault("cart", []).append(id)
+    session["voice_msg"] = "Product added to cart"
     session.modified = True
     return redirect("/products")
 
 @app.route("/cart")
+@login_required
 def view_cart():
     products = get_products()
     cart_ids = session.get("cart", [])
@@ -233,70 +226,91 @@ def view_cart():
     return render_template("cart.html", cart=cart_items, total=total)
 
 @app.route("/remove/<int:id>")
+@login_required
 def remove_from_cart(id):
     if "cart" in session and id in session["cart"]:
         session["cart"].remove(id)
+        session["voice_msg"] = "Product removed from cart"
         session.modified = True
     return redirect("/cart")
 
 # -------------------------
-# VOICE ADD (FIXED)
+# VOICE ADD
 # -------------------------
 @app.route('/voice-add')
+@login_required
 def voice_add():
 
-    query = request.args.get('q', '')
-    query = normalize(query)
-
+    query = normalize(request.args.get('q', ''))
     if not query:
         return redirect('/products')
 
     products = get_products()
-    found_product = None
+    found = None
 
-    # 🔥 direct match
     for p in products:
         if query in normalize(p["name"]):
-            found_product = p
+            found = p
             break
 
-    # 🔥 category match
-    if not found_product:
-        category, keywords = detect_category(query)
-
+    if not found:
+        _, keywords = detect_category(query)
         for p in products:
             if any(word in normalize(p["name"]) for word in keywords):
-                found_product = p
+                found = p
                 break
 
-    # 🛒 add to cart
-    if found_product:
-        session.setdefault("cart", []).append(found_product["id"])
+    if found:
+        session.setdefault("cart", []).append(found["id"])
+        session["voice_msg"] = f"{found['name']} added to cart"
         session.modified = True
+    else:
+        session["voice_msg"] = "Product not found"
 
     return redirect('/cart')
 
-
-
+# -------------------------
+# VOICE REMOVE
+# -------------------------
 @app.route('/voice-remove')
+@login_required
 def voice_remove():
 
-    query = request.args.get('q', '')
-    query = normalize(query)
-
-    if not query:
-        return redirect('/cart')
-
+    query = normalize(request.args.get('q', ''))
     products = get_products()
     cart_ids = session.get("cart", [])
 
     for p in products:
         if p["id"] in cart_ids and query in normalize(p["name"]):
             session["cart"].remove(p["id"])
+            session["voice_msg"] = f"{p['name']} removed"
             session.modified = True
             break
 
     return redirect('/cart')
+
+# -------------------------
+# 👨‍💼 ADMIN PANEL
+# -------------------------
+@app.route("/admin")
+@login_required
+def admin():
+
+    if session["user"] != "admin@gmail.com":
+        return "❌ Access Denied"
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id, name, email FROM users")
+    users = cursor.fetchall()
+
+    cursor.execute("SELECT * FROM products")
+    products = cursor.fetchall()
+
+    conn.close()
+
+    return render_template("admin.html", users=users, products=products)
 
 # -------------------------
 # LOGOUT

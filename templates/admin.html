@@ -1,35 +1,31 @@
 {% extends "layout.html" %}
-{% block title %} Admin Dashboard {% endblock %}
+{% block title %} Admin Panel {% endblock %}
 
 {% block content %}
 
 <h2>👨‍💼 Admin Dashboard</h2>
 
-<!-- USERS -->
-<h3>Registered Users</h3>
+<h3>👥 Registered Users</h3>
 
 <table border="1" cellpadding="10">
     <tr>
         <th>ID</th>
         <th>Name</th>
         <th>Email</th>
-        <th>Password</th>
     </tr>
 
-    {% for u in users %}
+    {% for user in users %}
     <tr>
-        <td>{{ u[0] }}</td>
-        <td>{{ u[1] }}</td>
-        <td>{{ u[2] }}</td>
-        <td>{{ u[3] }}</td>
+        <td>{{ user[0] }}</td>
+        <td>{{ user[1] }}</td>
+        <td>{{ user[2] }}</td>
     </tr>
     {% endfor %}
 </table>
 
-<br><br>
+<br>
 
-<!-- PRODUCTS -->
-<h3>All Products</h3>
+<h3>🛍 Products</h3>
 
 <table border="1" cellpadding="10">
     <tr>
@@ -38,11 +34,11 @@
         <th>Price</th>
     </tr>
 
-    {% for p in products %}
+    {% for product in products %}
     <tr>
-        <td>{{ p[0] }}</td>
-        <td>{{ p[1] }}</td>
-        <td>₹{{ p[2] }}</td>
+        <td>{{ product[0] }}</td>
+        <td>{{ product[1] }}</td>
+        <td>₹{{ product[2] }}</td>
     </tr>
     {% endfor %}
 </table>
