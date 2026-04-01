@@ -161,7 +161,7 @@ function startListening(){
 window.onload = function(){
 
     // 🔊 Backend message (add/remove)
-    let msg = "{{ session.get('voice_msg', '') }}";
+    let msg = "{{ session.pop('voice_msg', '') }}";
 
     if(msg){
         speak(msg);
