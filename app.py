@@ -94,16 +94,34 @@ def init_db():
     # Products (only once)
     cursor.execute("SELECT COUNT(*) FROM products")
     if cursor.fetchone()[0] == 0:
-        cursor.executemany(
-            "INSERT INTO products(name, price) VALUES(?,?)",
-            [
-                ("Running Shoes Pro", 2500), ("Casual Sneakers", 1800),
-                ("Nike Air Max", 6000), ("Adidas Ultraboost", 8000),
-                ("Gaming Laptop RTX 3050", 70000), ("MacBook Air M1", 85000),
-                ("Sony Headphones", 20000), ("Boat Rockerz", 1500),
-                ("Men T-Shirt", 800), ("Women Kurti", 1800)
-            ]
-        )
+      cursor.executemany(
+        "INSERT INTO products(name, price) VALUES(?,?)",
+        [
+            ("Running Shoes Pro", 2500), ("Casual Sneakers", 1800),
+            ("Sports Trainers", 3000), ("Formal Leather Shoes", 3500),
+            ("Nike Air Max", 6000), ("Adidas Ultraboost", 8000),
+            ("Puma Street Shoes", 2200), ("Reebok Classic", 2700),
+            ("Campus Sneakers", 1500), ("Woodland Boots", 4500),
+
+            ("Gaming Laptop RTX 3050", 70000), ("Gaming Laptop RTX 4060", 95000),
+            ("Office Laptop i5", 50000), ("Office Laptop i7", 65000),
+            ("MacBook Air M1", 85000), ("MacBook Pro M2", 120000),
+            ("HP Pavilion Laptop", 55000), ("Dell Inspiron Laptop", 52000),
+            ("Lenovo ThinkPad", 60000), ("Asus ROG Strix", 110000),
+
+            ("Wireless Headphones", 4000), ("Bluetooth Headphones", 2500),
+            ("Sony WH-1000XM4", 20000), ("JBL Tune 510BT", 3000),
+            ("Boat Rockerz 450", 1500), ("Noise Cancelling Headphones", 7000),
+            ("Gaming Headset RGB", 3500), ("Over Ear Headphones", 2800),
+            ("In-Ear Earbuds", 1200), ("Apple AirPods", 15000),
+
+            ("Men Casual Shirt", 1200), ("Women Stylish Shirt", 1500),
+            ("Men T-Shirt", 800), ("Women Kurti", 1800),
+            ("Denim Jeans", 2000), ("Winter Jacket", 3500),
+            ("Unisex Hoodie", 2200), ("Formal Shirt", 1700),
+            ("Track Pants", 1400), ("Summer Dress", 1600)
+        ]
+    )
 
     conn.commit()
     conn.close()
@@ -242,24 +260,32 @@ def remove_from_cart(id):
 def voice_add():
 
     query = normalize(request.args.get('q', ''))
+
     if not query:
         return redirect('/products')
 
     products = get_products()
     found = None
 
+    # 🔥 PRIORITY 1: EXACT WORD MATCH (gaming laptop)
     for p in products:
-        if query in normalize(p["name"]):
+        pname = normalize(p["name"])
+
+        if all(word in pname for word in query.split()):
             found = p
             break
 
+    # 🔥 PRIORITY 2: CATEGORY MATCH (laptop → first laptop)
     if not found:
         _, keywords = detect_category(query)
+
         for p in products:
-            if any(word in normalize(p["name"]) for word in keywords):
+            pname = normalize(p["name"])
+            if any(word in pname for word in keywords):
                 found = p
                 break
 
+    # 🛒 ADD TO CART
     if found:
         session.setdefault("cart", []).append(found["id"])
         session["voice_msg"] = f"{found['name']} added to cart"
