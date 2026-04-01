@@ -193,6 +193,10 @@ def login():
     if user:
         session["user"] = email
         session["voice_msg"] = "Login successful. Welcome to voice shopping"
+        # 🔥 ADMIN CHECK
+        if email == "admin@gmail.com":
+            return redirect("/admin")
+
         return redirect("/products")
 
     return "❌ Invalid credentials"
